@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set('crm-access-token', data.session.access_token, { httpOnly: true, path: '/', maxAge, sameSite: 'lax' })
   res.cookies.set('crm-refresh-token', data.session.refresh_token, { httpOnly: true, path: '/', maxAge, sameSite: 'lax' })
   res.cookies.set('crm-user-id', data.user.id, { httpOnly: false, path: '/', maxAge, sameSite: 'lax' })
-  res.cookies.set('crm-user-email', data.user.email, { httpOnly: false, path: '/', maxAge, sameSite: 'lax' })
+  res.cookies.set('crm-user-email', data.user.email || '', { httpOnly: false, path: '/', maxAge, sameSite: 'lax' })
 
   return res
 }
