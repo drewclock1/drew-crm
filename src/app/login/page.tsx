@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -18,42 +16,43 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    setSuccess('')
 
-    const supabase = createClient()
+    const endpoint = mode === 'signin' ? '/api/auth/signin' : '/api/auth/signup'
+    const body = mode === 'signin'
+      ? { email, password }
+      : { email, password, full_name: fullName }
 
-    if (mode === 'signin') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      } else {
-        router.push('/')
-        router.refresh()
-      }
-    } else {
-      // Use server-side signup that auto-confirms — no email needed
-      const res = await fetch('/api/auth/signup', {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || 'Something went wrong')
+      setLoading(false)
+      return
+    }
+
+    // After signup, sign in automatically to get the session cookie
+    if (mode === 'signup') {
+      const signInRes = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, full_name: fullName }),
+        body: JSON.stringify({ email, password }),
       })
-      const result = await res.json()
-      if (!res.ok) {
-        setError(result.error || 'Signup failed')
+      if (!signInRes.ok) {
+        const d = await signInRes.json()
+        setError(d.error || 'Account created but sign in failed')
         setLoading(false)
         return
       }
-      // Account created + confirmed — sign in immediately
-      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInErr) {
-        setError(signInErr.message)
-        setLoading(false)
-      } else {
-        router.push('/')
-        router.refresh()
-      }
     }
+
+    router.push('/')
+    router.refresh()
   }
 
   return (
@@ -72,22 +71,12 @@ export default function LoginPage() {
 
         {/* Tab toggle */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-          <button
-            type="button"
-            onClick={() => { setMode('signin'); setError(''); setSuccess('') }}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-              mode === 'signin' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
+          <button type="button" onClick={() => { setMode('signin'); setError('') }}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'signin' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500'}`}>
             Sign In
           </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-              mode === 'signup' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
+          <button type="button" onClick={() => { setMode('signup'); setError('') }}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'signup' ? 'bg-white shadow-sm text-brand-navy' : 'text-gray-500'}`}>
             Create Account
           </button>
         </div>
@@ -96,65 +85,31 @@ export default function LoginPage() {
           {mode === 'signup' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                required
+              <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                placeholder="Drew Clock"
-              />
+                placeholder="Drew Clock" />
             </div>
           )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              placeholder="you@company.com"
-            />
+              placeholder="you@company.com" />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={6}
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-              placeholder="••••••••"
-            />
-            {mode === 'signup' && (
-              <p className="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
-            )}
+              placeholder="••••••••" />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2.5 text-sm">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2.5 text-sm">{error}</div>
           )}
 
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-2.5 text-sm">
-              {success}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full btn-primary py-3 text-base font-semibold disabled:opacity-60"
-          >
-            {loading
-              ? (mode === 'signin' ? 'Signing in...' : 'Creating account...')
-              : (mode === 'signin' ? 'Sign In' : 'Create Account')}
+          <button type="submit" disabled={loading}
+            className="w-full btn-primary py-3 text-base font-semibold disabled:opacity-60">
+            {loading ? '...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
       </div>
