@@ -53,7 +53,7 @@ export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
     const newStage = destination.droppableId
 
     // Optimistic update
-    setLeads(prev => prev.map(l => l.id === draggableId ? { ...l, stage: newStage as AnyLead['stage'] } : l))
+    setLeads(prev => prev.map(l => l.id === draggableId ? ({ ...l, stage: newStage } as AnyLead) : l))
 
     await fetch(`/api/leads/${pipelineType}/${draggableId}`, {
       method: 'PATCH',
