@@ -35,8 +35,13 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const pathname = request.nextUrl.pathname
 
-  // Public routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/webhooks')) {
+  // Public routes — never intercept these
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/sb/') ||        // Supabase proxy — must pass through untouched
+    pathname.startsWith('/api/auth/') ||  // Auth API routes
+    pathname.startsWith('/api/webhooks')
+  ) {
     return response
   }
 
@@ -59,5 +64,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sb/).*)'],
 }
