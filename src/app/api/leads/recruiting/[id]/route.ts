@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
-import { triggerSmsBot } from '@/lib/sms-bot'
+import { triggerBot } from '@/lib/sms-bot'
 import { RecruitingStage, RECRUITING_STAGE_LABELS } from '@/types'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (contact?.phone) {
       const triggerContext = `Recruiting prospect ${contact.first_name} ${contact.last_name} moved from ${oldLabel} to ${newLabel}. Respond to advance the recruiting process and keep them engaged.`
-      await triggerSmsBot(contact.phone, triggerContext, params.id, 'recruiting')
+      await triggerBot({ contactPhone: contact.phone, triggerContext, leadId: params.id, leadType: 'recruiting', contactId: data.contact_id })
     }
   }
 

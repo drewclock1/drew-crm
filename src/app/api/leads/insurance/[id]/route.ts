@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
-import { triggerSmsBot } from '@/lib/sms-bot'
+import { triggerBot } from '@/lib/sms-bot'
 import { pushToSheets } from '@/lib/sheets'
 import { InsuranceStage, INSURANCE_STAGE_LABELS } from '@/types'
 
@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Fire SMS bot
     if (contact?.phone) {
       const triggerContext = `Insurance lead ${contact.first_name} ${contact.last_name} moved from ${oldStageLabel} to ${newStageLabel}. Respond appropriately to follow up and advance the sale.`
-      await triggerSmsBot(contact.phone, triggerContext, params.id, 'insurance')
+      await triggerBot({ contactPhone: contact.phone, triggerContext, leadId: params.id, leadType: 'insurance', contactId: data.contact_id })
     }
 
     // Push to Google Sheets

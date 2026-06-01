@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
-import { triggerSmsBot } from '@/lib/sms-bot'
+import { triggerBot } from '@/lib/sms-bot'
 
 export async function GET(req: NextRequest) {
   const supabase = createServiceClient()
