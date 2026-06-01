@@ -93,7 +93,7 @@ export interface RecruitingLead {
   contact_id: string
   recruiter_id: string | null
   stage: RecruitingStage
-  current_role: string | null
+  current_position: string | null
   licensed: boolean
   est_first_year: number | null
   start_date: string | null

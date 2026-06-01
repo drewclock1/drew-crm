@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.recruiting_leads (
   contact_id UUID NOT NULL REFERENCES public.contacts(id) ON DELETE CASCADE,
   recruiter_id UUID REFERENCES public.users(id),
   stage TEXT NOT NULL DEFAULT 'prospect' CHECK (stage IN ('prospect', 'reached_out', 'interview', 'offer_sent', 'onboarded', 'lost')),
-  current_role TEXT,
+  current_position TEXT,
   licensed BOOLEAN DEFAULT FALSE,
   est_first_year NUMERIC(12, 2),
   start_date DATE,

@@ -28,7 +28,7 @@ export default function RecruitingPage() {
       `${l.contact?.first_name || ''} ${l.contact?.last_name || ''}`.trim(),
       l.contact?.phone || '',
       l.stage,
-      l.current_role || '',
+      l.current_position || '',
       l.licensed ? 'Yes' : 'No',
       l.est_first_year || '',
       l.recruiter?.full_name || l.recruiter?.email || '',
@@ -112,7 +112,7 @@ export default function RecruitingPage() {
                         {RECRUITING_STAGE_LABELS[lead.stage as RecruitingStage]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{lead.current_role || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{lead.current_position || '—'}</td>
                     <td className="px-4 py-3">
                       <span className={clsx('text-xs px-2 py-0.5 rounded font-medium', lead.licensed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
                         {lead.licensed ? 'Yes' : 'No'}

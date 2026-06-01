@@ -108,7 +108,7 @@ export default function LeadCard({ lead, pipelineType, onClick }: Props) {
         {!isInsurance && rec && (
           <>
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span>{rec.current_role || 'Unknown role'}</span>
+              <span>{rec.current_position || 'Unknown role'}</span>
               {rec.licensed && <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">Licensed</span>}
             </div>
             <div className="text-sm font-bold text-brand-gold">{formatMoney(rec.est_first_year)} est.</div>
