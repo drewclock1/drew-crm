@@ -2,13 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 15;
-  --background-end-rgb: 10, 10, 15;
+@layer base {
+  :root {
+    --brand-blue: #2B7FD4;
+    --brand-gold: #C9951A;
+    --brand-navy: #0C3B6E;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
+@layer components {
+  .btn-primary {
+    @apply bg-brand-blue text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium;
+  }
+  
+  .btn-secondary {
+    @apply bg-brand-navy text-white px-4 py-2 rounded-lg hover:bg-blue-950 transition-colors font-medium;
+  }
+  
+  .btn-gold {
+    @apply bg-brand-gold text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors font-medium;
+  }
+  
+  .btn-outline {
+    @apply border border-brand-blue text-brand-blue px-4 py-2 rounded-lg hover:bg-brand-surface-blue transition-colors font-medium;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+  }
+
+  .badge-hot {
+    @apply bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-warm {
+    @apply bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-cold {
+    @apply bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
 }
