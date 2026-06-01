@@ -32,25 +32,26 @@ export default function LoginPage() {
         router.refresh()
       }
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
+      // Use server-side signup that auto-confirms — no email needed
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name: fullName }),
       })
-      if (error) {
-        setError(error.message)
+      const result = await res.json()
+      if (!res.ok) {
+        setError(result.error || 'Signup failed')
+        setLoading(false)
+        return
+      }
+      // Account created + confirmed — sign in immediately
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInErr) {
+        setError(signInErr.message)
         setLoading(false)
       } else {
-        // Auto sign-in after signup
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInErr) {
-          setSuccess('Account created! Check your email to confirm, then sign in.')
-          setMode('signin')
-          setLoading(false)
-        } else {
-          router.push('/')
-          router.refresh()
-        }
+        router.push('/')
+        router.refresh()
       }
     }
   }
