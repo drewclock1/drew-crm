@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { InsuranceLead, RecruitingLead, INSURANCE_STAGES, RECRUITING_STAGES, INSURANCE_STAGE_LABELS, RECRUITING_STAGE_LABELS } from '@/types'
+import {
+  InsuranceLead,
+  RecruitingLead,
+  INSURANCE_STAGES,
+  RECRUITING_STAGES,
+  INSURANCE_STAGE_LABELS,
+  RECRUITING_STAGE_LABELS,
+} from '@/types'
 import LeadCard from './LeadCard'
 import { clsx } from 'clsx'
 import { Plus } from 'lucide-react'
@@ -14,19 +21,20 @@ interface Props {
   onLeadClick?: (lead: AnyLead) => void
 }
 
-const STAGE_COLORS: Record<string, string> = {
-  new_lead: 'border-t-gray-400',
-  contacted: 'border-t-blue-400',
-  quote_sent: 'border-t-purple-400',
-  follow_up: 'border-t-yellow-400',
-  closed_won: 'border-t-green-500',
-  closed_lost: 'border-t-red-400',
-  prospect: 'border-t-gray-400',
-  reached_out: 'border-t-blue-400',
-  interview: 'border-t-purple-400',
-  offer_sent: 'border-t-yellow-400',
-  onboarded: 'border-t-green-500',
-  lost: 'border-t-red-400',
+// Column header colors by stage
+const STAGE_HEADER: Record<string, { bg: string; color: string; accent: string }> = {
+  new_lead:    { bg: '#f8fafc', color: '#475569', accent: '#94a3b8' },
+  contacted:   { bg: '#eff6ff', color: '#1d4ed8', accent: '#2B7FD4' },
+  quote_sent:  { bg: '#f5f3ff', color: '#5b21b6', accent: '#7c3aed' },
+  follow_up:   { bg: '#fffbeb', color: '#92400e', accent: '#f59e0b' },
+  closed_won:  { bg: '#f0fdf4', color: '#166534', accent: '#4ade80' },
+  closed_lost: { bg: '#fff1f2', color: '#9f1239', accent: '#f43f5e' },
+  prospect:    { bg: '#f8fafc', color: '#475569', accent: '#94a3b8' },
+  reached_out: { bg: '#eff6ff', color: '#1d4ed8', accent: '#2B7FD4' },
+  interview:   { bg: '#f5f3ff', color: '#5b21b6', accent: '#7c3aed' },
+  offer_sent:  { bg: '#fffbeb', color: '#92400e', accent: '#f59e0b' },
+  onboarded:   { bg: '#f0fdf4', color: '#166534', accent: '#4ade80' },
+  lost:        { bg: '#fff1f2', color: '#9f1239', accent: '#f43f5e' },
 }
 
 export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
@@ -44,6 +52,7 @@ export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
   }, [pipelineType])
 
   useEffect(() => {
+    setLoading(true)
     fetchLeads()
   }, [fetchLeads])
 
@@ -52,8 +61,9 @@ export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
     const { draggableId, destination } = result
     const newStage = destination.droppableId
 
-    // Optimistic update
-    setLeads(prev => prev.map(l => l.id === draggableId ? ({ ...l, stage: newStage } as AnyLead) : l))
+    setLeads(prev =>
+      prev.map(l => (l.id === draggableId ? ({ ...l, stage: newStage } as AnyLead) : l))
+    )
 
     await fetch(`/api/leads/${pipelineType}/${draggableId}`, {
       method: 'PATCH',
@@ -65,18 +75,30 @@ export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
   const stageLeads = (stage: string) => leads.filter(l => l.stage === stage)
 
   const stageValue = (stage: string) => {
-    const stagel = stageLeads(stage)
+    const sl = stageLeads(stage)
     if (pipelineType === 'insurance') {
-      return (stagel as InsuranceLead[]).reduce((s, l) => s + (l.annual_premium || 0), 0)
+      return (sl as InsuranceLead[]).reduce((s, l) => s + (l.annual_premium || 0), 0)
     }
-    return (stagel as RecruitingLead[]).reduce((s, l) => s + (l.est_first_year || 0), 0)
+    return (sl as RecruitingLead[]).reduce((s, l) => s + (l.est_first_year || 0), 0)
   }
+
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 
   if (loading) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4">
         {stages.map(s => (
-          <div key={s} className="w-60 shrink-0 bg-white rounded-xl border border-gray-200 h-64 animate-pulse" />
+          <div
+            key={s}
+            className="shrink-0 rounded-xl animate-pulse"
+            style={{
+              width: '240px',
+              minWidth: '220px',
+              height: '280px',
+              background: '#e9eef5',
+            }}
+          />
         ))}
       </div>
     )
@@ -84,65 +106,118 @@ export default function KanbanBoard({ pipelineType, onLeadClick }: Props) {
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map(stage => (
-          <div
-            key={stage}
-            className={clsx(
-              'w-60 shrink-0 bg-white rounded-xl border-t-4 border border-gray-200 shadow-sm',
-              STAGE_COLORS[stage]
-            )}
-          >
-            {/* Column header */}
-            <div className="px-3 py-3 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-brand-navy">{labels[stage as keyof typeof labels]}</span>
-                <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 font-medium">
-                  {stageLeads(stage).length}
-                </span>
-              </div>
-              {stageValue(stage) > 0 && (
-                <p className="text-xs text-brand-gold font-medium mt-0.5">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stageValue(stage))}
-                </p>
-              )}
-            </div>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {stages.map(stage => {
+          const header = STAGE_HEADER[stage] || { bg: '#f8fafc', color: '#475569', accent: '#94a3b8' }
+          const count = stageLeads(stage).length
+          const val = stageValue(stage)
 
-            {/* Cards */}
-            <Droppable droppableId={stage}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={clsx(
-                    'p-2 min-h-[100px] space-y-2 transition-colors',
-                    snapshot.isDraggingOver && 'bg-brand-surface-blue'
-                  )}
-                >
-                  {stageLeads(stage).map((lead, index) => (
-                    <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={clsx(snapshot.isDragging && 'rotate-1 shadow-xl')}
-                        >
-                          <LeadCard
-                            lead={lead}
-                            pipelineType={pipelineType}
-                            onClick={() => onLeadClick?.(lead)}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
+          return (
+            <div
+              key={stage}
+              className="shrink-0 flex flex-col rounded-xl overflow-hidden"
+              style={{
+                width: '240px',
+                minWidth: '220px',
+                maxWidth: '260px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              }}
+            >
+              {/* Column header */}
+              <div
+                className="px-3 py-3"
+                style={{
+                  background: header.bg,
+                  borderBottom: `2px solid ${header.accent}22`,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: header.accent }}
+                    />
+                    <span className="text-sm font-bold" style={{ color: header.color }}>
+                      {labels[stage as keyof typeof labels]}
+                    </span>
+                  </div>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: header.accent + '20', color: header.color }}
+                  >
+                    {count}
+                  </span>
                 </div>
-              )}
-            </Droppable>
-          </div>
-        ))}
+                {val > 0 && (
+                  <p className="text-xs font-semibold mt-1" style={{ color: '#C9951A' }}>
+                    {fmt(val)}
+                  </p>
+                )}
+              </div>
+
+              {/* Droppable area */}
+              <Droppable droppableId={stage}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex-1 p-2 space-y-2 transition-colors duration-150"
+                    style={{
+                      minHeight: '80px',
+                      background: snapshot.isDraggingOver ? '#EBF4FF' : 'transparent',
+                    }}
+                  >
+                    {stageLeads(stage).map((lead, index) => (
+                      <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              transform: snapshot.isDragging
+                                ? (provided.draggableProps.style?.transform || '') + ' rotate(1.5deg)'
+                                : provided.draggableProps.style?.transform,
+                            }}
+                          >
+                            <LeadCard
+                              lead={lead}
+                              pipelineType={pipelineType}
+                              onClick={() => onLeadClick?.(lead)}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+
+              {/* Add lead button */}
+              <button
+                className="flex items-center gap-2 w-full px-3 py-2.5 text-xs font-medium transition-colors duration-150"
+                style={{ color: '#94a3b8', borderTop: '1px solid #f1f5f9' }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.color = '#2B7FD4'
+                  el.style.background = '#EBF4FF'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.color = '#94a3b8'
+                  el.style.background = 'transparent'
+                }}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add lead
+              </button>
+            </div>
+          )
+        })}
       </div>
     </DragDropContext>
   )

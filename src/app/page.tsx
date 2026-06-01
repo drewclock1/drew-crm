@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, UserPlus, TrendingUp, Users, DollarSign, BarChart2, RefreshCw, ArrowUpRight } from 'lucide-react'
+import {
+  Shield, UserPlus, TrendingUp, Users,
+  DollarSign, BarChart2, RefreshCw, ArrowUpRight,
+} from 'lucide-react'
 import { clsx } from 'clsx'
 import KanbanBoard from '@/components/KanbanBoard'
 import CommissionCalculator from '@/components/CommissionCalculator'
@@ -23,24 +26,31 @@ function currency(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 const STAT_CARDS = (s: Stats, pipeline: 'insurance' | 'recruiting') => [
   {
     label: 'Pipeline Value',
     value: currency(pipeline === 'insurance' ? s.insurancePipelineValue : s.recruitingPipelineValue),
     icon: TrendingUp,
     accent: 'stat-card-blue',
-    iconBg: 'bg-brand-blue-bg',
-    iconColor: 'text-brand-blue',
+    iconBg: '#EBF4FF',
+    iconColor: '#2B7FD4',
     change: '+12%',
     positive: true,
   },
   {
     label: 'Leads This Week',
-    value: String(s.leadsThisWeek ?? '0'),
+    value: String(s.leadsThisWeek ?? 0),
     icon: Users,
     accent: 'stat-card-navy',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-brand-navy',
+    iconBg: '#e0e8f5',
+    iconColor: '#0C3B6E',
     change: '+5',
     positive: true,
   },
@@ -49,8 +59,8 @@ const STAT_CARDS = (s: Stats, pipeline: 'insurance' | 'recruiting') => [
     value: currency(s.commissionMTD ?? 0),
     icon: DollarSign,
     accent: 'stat-card-gold',
-    iconBg: 'bg-brand-gold-bg',
-    iconColor: 'text-brand-gold',
+    iconBg: '#FBF5E6',
+    iconColor: '#C9951A',
     change: '+8%',
     positive: true,
   },
@@ -59,8 +69,8 @@ const STAT_CARDS = (s: Stats, pipeline: 'insurance' | 'recruiting') => [
     value: `${s.closeRate ?? 0}%`,
     icon: BarChart2,
     accent: 'stat-card-green',
-    iconBg: 'bg-green-50',
-    iconColor: 'text-green-600',
+    iconBg: '#f0fdf4',
+    iconColor: '#16a34a',
     change: '+2%',
     positive: true,
   },
@@ -71,34 +81,50 @@ export default function Dashboard() {
   const [pipeline, setPipeline] = useState<'insurance' | 'recruiting'>('insurance')
   const [stats, setStats] = useState<Stats | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     fetch('/api/dashboard/stats').then(r => r.json()).then(setStats)
   }, [])
 
   const handleSync = async () => {
     setSyncing(true)
-    await fetch(`/api/cron/sheets-sync`, { headers: { 'x-cron-secret': process.env.NEXT_PUBLIC_CRON_SECRET || '' } })
+    await fetch('/api/cron/sheets-sync', {
+      headers: { 'x-cron-secret': process.env.NEXT_PUBLIC_CRON_SECRET || '' },
+    })
     const d = await fetch('/api/dashboard/stats').then(r => r.json())
     setStats(d)
     setSyncing(false)
   }
 
-  const blank: Stats = { insurancePipelineValue: 0, recruitingPipelineValue: 0, leadsThisWeek: 0, commissionMTD: 0, closeRate: 0, lastSync: null }
+  const blank: Stats = {
+    insurancePipelineValue: 0,
+    recruitingPipelineValue: 0,
+    leadsThisWeek: 0,
+    commissionMTD: 0,
+    closeRate: 0,
+    lastSync: null,
+  }
   const s = stats || blank
+  const cards = STAT_CARDS(s, pipeline)
 
   return (
     <div className="p-6 max-w-full animate-fade-in">
 
-      {/* ── Header ── */}
+      {/* ── Header bar ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard</h1>
+          <h1 className="page-title">
+            {getGreeting()}, {user?.full_name?.split(' ')[0] || 'Drew'} 🔥
+          </h1>
           <p className="page-sub">
-            {format(new Date(), 'EEEE, MMMM d, yyyy')}
+            {mounted ? format(new Date(), 'EEEE, MMMM d, yyyy') : ''}
             {s.lastSync && (
-              <span className="ml-2 text-xs text-slate-400">
-                · Last sync {format(new Date(s.lastSync.synced_at), 'h:mm a')} · {s.lastSync.rows_pulled} rows
+              <span className="ml-2 opacity-60">
+                · Last sync{' '}
+                {mounted ? format(new Date(s.lastSync.synced_at), 'h:mm a') : ''}
+                {' · '}{s.lastSync.rows_pulled} rows
               </span>
             )}
           </p>
@@ -111,71 +137,97 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Pipeline toggle ── */}
-      <div className="inline-flex bg-white border border-slate-200 rounded-xl p-1 mb-6 shadow-sm">
+      {/* ── Pipeline toggle pills ── */}
+      <div
+        className="inline-flex p-1 mb-6 rounded-xl"
+        style={{
+          background: '#fff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        }}
+      >
         {(['insurance', 'recruiting'] as const).map(p => (
           <button
             key={p}
             onClick={() => setPipeline(p)}
             className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize',
-              pipeline === p
-                ? p === 'insurance'
-                  ? 'bg-brand-blue text-white shadow-blue'
-                  : 'bg-brand-navy text-white shadow-md'
-                : 'text-slate-500 hover:text-slate-700'
+              'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 capitalize',
+              pipeline === p ? 'text-white' : 'text-slate-500 hover:text-slate-700'
             )}
+            style={pipeline === p ? {
+              background: p === 'insurance'
+                ? 'linear-gradient(135deg, #2B7FD4, #1A5BA8)'
+                : 'linear-gradient(135deg, #0C3B6E, #1A5BA8)',
+              boxShadow: p === 'insurance'
+                ? '0 4px 12px rgba(43,127,212,0.3)'
+                : '0 4px 12px rgba(12,59,110,0.3)',
+            } : {}}
           >
-            {p === 'insurance' ? <Shield className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-            {p}
+            {p === 'insurance'
+              ? <Shield className="w-4 h-4" strokeWidth={2} />
+              : <UserPlus className="w-4 h-4" strokeWidth={2} />
+            }
+            {p === 'insurance' ? 'Insurance' : 'Recruiting'}
           </button>
         ))}
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        {STAT_CARDS(s, pipeline).map(card => (
-          <div key={card.label} className={clsx('stat-card', card.accent)}>
-            <div className="flex items-start justify-between mb-3">
-              <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', card.iconBg)}>
-                <card.icon className={clsx('w-5 h-5', card.iconColor)} />
+      <div className="grid grid-cols-4 gap-4 mb-6 stagger">
+        {cards.map((card, i) => (
+          <div key={card.label} className={clsx('stat-card animate-slide-up')} style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="flex items-start justify-between mb-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: card.iconBg }}
+              >
+                <card.icon className="w-5 h-5" style={{ color: card.iconColor }} strokeWidth={2} />
               </div>
-              <span className={clsx(
-                'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full',
-                card.positive ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'
-              )}>
+              <span
+                className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-1 rounded-full"
+                style={{
+                  background: card.positive ? '#f0fdf4' : '#fff1f2',
+                  color: card.positive ? '#166534' : '#9f1239',
+                }}
+              >
                 <ArrowUpRight className="w-3 h-3" />
                 {card.change}
               </span>
             </div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{card.label}</p>
-            <p className="text-2xl font-extrabold text-brand-navy tracking-tight">{card.value}</p>
+            <p className="text-[10.5px] font-bold uppercase tracking-wider mb-1" style={{ color: '#94a3b8' }}>
+              {card.label}
+            </p>
+            <p className="text-2xl font-extrabold tracking-tight" style={{ color: '#0C3B6E' }}>
+              {card.value}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* ── Main grid ── */}
+      {/* ── Main content grid ── */}
       <div className="flex gap-5">
         {/* Kanban */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
               {pipeline === 'insurance' ? '🏥 Insurance Pipeline' : '👤 Recruiting Pipeline'}
             </h2>
           </div>
           <KanbanBoard pipelineType={pipeline} />
         </div>
 
-        {/* Right sidebar */}
+        {/* Right sidebar widgets */}
         <div className="w-[280px] shrink-0 space-y-4">
           <CommissionCalculator agentId={user?.id} />
           {user && <GoalMeters userId={user.id} userRole={user.role} />}
         </div>
       </div>
 
-      {/* ── Activity Feed ── */}
+      {/* ── Activity feed ── */}
       <div className="mt-6">
-        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">⚡ Live Activity</h2>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
+          ⚡ Live Activity
+        </h2>
         <ActivityFeed />
       </div>
     </div>
