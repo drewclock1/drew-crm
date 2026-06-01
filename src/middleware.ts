@@ -2,6 +2,20 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Exit immediately for routes that must NEVER be intercepted
+  // Check pathname FIRST — before creating any Supabase client
+  if (
+    pathname.startsWith('/sb') ||          // Supabase proxy — pass through untouched
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/webhooks') ||
+    pathname.startsWith('/api/cron')
+  ) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: { headers: request.headers },
   })
@@ -16,16 +30,12 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: Record<string, unknown>) {
           request.cookies.set({ name, value, ...options } as any)
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value, ...options } as any)
         },
         remove(name: string, options: Record<string, unknown>) {
           request.cookies.set({ name, value: '', ...options } as any)
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value: '', ...options } as any)
         },
       },
@@ -33,36 +43,14 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { session } } = await supabase.auth.getSession()
-  const pathname = request.nextUrl.pathname
 
-  // Public routes — never intercept these
-  if (
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/sb/') ||        // Supabase proxy — must pass through untouched
-    pathname.startsWith('/api/auth/') ||  // Auth API routes
-    pathname.startsWith('/api/webhooks')
-  ) {
-    return response
-  }
-
-  // API cron - check CRON_SECRET
-  if (pathname.startsWith('/api/cron')) {
-    const secret = request.headers.get('x-cron-secret')
-    if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    return response
-  }
-
-  // Redirect unauthenticated users
   if (!session) {
-    const loginUrl = new URL('/login', request.url)
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|sb/).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
